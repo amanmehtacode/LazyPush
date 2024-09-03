@@ -15,7 +15,7 @@
 ### 1. Download the Script
 
 ```bash
-curl -o lazypush https://your-repo-url/lazypush
+curl -o lazypush https://github.com/amanmehtacode/LazyPush
 ```
 
 ### 2. Make the Script Executable
