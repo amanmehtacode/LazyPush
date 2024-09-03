@@ -14,29 +14,31 @@ get_commit_message_from_groq() {
   local model="llama3-8b-8192"
 
   # Generate a commit message based on changes
-  response=$(curl -s -X POST https://api.groq.ai/v1/chat/completions \
-    -H "Authorization: Bearer $api_key" \
-    -H "Content-Type: application/json" \
-    -d @- <<EOF
-{
-  "model": "$model",
-  "messages": [
-    {
-      "role": "system",
-      "content": "You are an expert software engineer. Generate a concise commit message based on the following changes."
-    },
-    {
-      "role": "user",
-      "content": "$changes"
-    }
-  ],
-  "max_tokens": 100,
-  "temperature": 1.0
-}
+  response=$(python - <<EOF
+import os
+from groq import Groq
+
+client = Groq(api_key="$api_key")
+
+chat_completion = client.chat.completions.create(
+    messages=[
+        {
+            "role": "system",
+            "content": "You are a helpful assistant. You reply with very short answers."
+        },
+        {
+            "role": "user",
+            "content": "Here are the changes:\n$changes\nPlease provide a concise commit message."
+        }
+    ],
+    model="$model",
+)
+
+print(chat_completion.choices[0].message.content)
 EOF
   )
 
-  echo "$response" | jq -r '.choices[0].message.content'
+  echo "$response"
 }
 
 # Parse options
