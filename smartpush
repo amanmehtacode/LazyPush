@@ -10,35 +10,8 @@ verbose() {
 # Function to fetch custom commit messages from GROQ
 get_commit_message_from_groq() {
   local changes=$1
-  local api_key="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"
-  local model="llama3-8b-8192"
-
-  # Generate a commit message based on changes
-  response=$(python - <<EOF
-import os
-from groq import Groq
-
-client = Groq(api_key="$api_key")
-
-chat_completion = client.chat.completions.create(
-    messages=[
-        {
-            "role": "system",
-            "content": "You are a helpful assistant. You reply with very short answers."
-        },
-        {
-            "role": "user",
-            "content": "Here are the changes:\n$changes\nPlease provide a concise commit message."
-        }
-    ],
-    model="$model",
-)
-
-print(chat_completion.choices[0].message.content)
-EOF
-  )
-
-  echo "$response"
+  local python_script="path/to/your/python_script.py"
+  python3 "$python_script" "$changes"
 }
 
 # Parse options
