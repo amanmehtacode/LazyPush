@@ -1,0 +1,104 @@
+#!/bin/bash
+
+# Function to display verbose messages
+verbose() {
+  if [ "$verbose_mode" = true ]; then
+    echo "$@"
+  fi
+}
+
+# Function to fetch custom commit messages from GROQ
+get_commit_message_from_groq() {
+  local changes=$1
+  local api_key="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"
+  local model="llama3-8b-8192"
+
+  # Generate a commit message based on changes
+  response=$(curl -s -X POST https://api.groq.ai/v1/chat/completions \
+    -H "Authorization: Bearer $api_key" \
+    -H "Content-Type: application/json" \
+    -d @- <<EOF
+{
+  "model": "$model",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert software engineer. Generate a concise commit message based on the following changes."
+    },
+    {
+      "role": "user",
+      "content": "$changes"
+    }
+  ],
+  "max_tokens": 100,
+  "temperature": 1.0
+}
+EOF
+  )
+
+  echo "$response" | jq -r '.choices[0].message.content'
+}
+
+# Parse options
+pull_before_push=false
+verbose_mode=false
+
+while [[ "$1" =~ ^- ]]; do
+  case $1 in
+    -p | --pull)
+      pull_before_push=true
+      ;;
+    -v | --verbose)
+      verbose_mode=true
+      ;;
+    *)
+      echo "Invalid option: $1"
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+# Check for unstaged changes
+if [ -z "$(git status --porcelain)" ]; then
+  echo "No changes to commit."
+  exit 0
+fi
+
+# Pull the latest changes if the option is enabled
+if [ "$pull_before_push" = true ]; then
+  verbose "Pulling latest changes from the remote branch..."
+  git pull origin $(git branch --show-current)
+fi
+
+# Generate commit message based on changes
+changes=$(git diff --cached)
+custom_commit_message=$(get_commit_message_from_groq "$changes")
+
+# Ask for a commit message
+echo "Custom commit message from GROQ:"
+echo "$custom_commit_message"
+read -p "Enter commit message (leave empty for default or type 'use' to use the generated message): " commit_message
+
+# Default message if none is provided
+if [ -z "$commit_message" ]; then
+  if [ "$commit_message" = "use" ]; then
+    commit_message="$custom_commit_message"
+  else
+    commit_message="Auto commit on $(date)"
+  fi
+fi
+
+# Add changes to the staging area
+verbose "Staging changes..."
+git add .
+
+# Commit with the provided or default message
+verbose "Committing changes..."
+git commit -m "$commit_message"
+
+# Push the changes to the current branch
+verbose "Pushing changes to the remote branch..."
+git push origin $(git branch --show-current)
+
+echo "Changes have been committed and pushed successfully."
