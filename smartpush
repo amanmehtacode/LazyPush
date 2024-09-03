@@ -7,13 +7,6 @@ verbose() {
   fi
 }
 
-# Function to fetch custom commit messages from GROQ
-get_commit_message_from_groq() {
-  local changes=$1
-  local python_script="path/to/your/python_script.py"
-  python3 "$python_script" "$changes"
-}
-
 # Parse options
 pull_before_push=false
 verbose_mode=false
@@ -46,20 +39,18 @@ if [ "$pull_before_push" = true ]; then
   git pull origin $(git branch --show-current)
 fi
 
-# Generate commit message based on changes
+# Get changes from git diff
 changes=$(git diff --cached)
-custom_commit_message=$(get_commit_message_from_groq "$changes")
 
-# Ask for a commit message
-echo "Custom commit message from GROQ:"
-echo "$custom_commit_message"
-read -p "Enter commit message (leave empty for default or type 'use' to use the generated message): " commit_message
+# Get commit message from Groq
+commit_message=$(python3 groq_client.py "$changes")
 
-# Default message if none is provided
-if [ -z "$commit_message" ]; then
-  if [ "$commit_message" = "use" ]; then
-    commit_message="$custom_commit_message"
-  else
+# Ask for confirmation to use the suggested message
+read -p "Suggested commit message: '$commit_message'. Do you want to use this message? (y/n): " confirmation
+
+if [[ "$confirmation" != "y" ]]; then
+  read -p "Enter commit message (leave empty for default): " commit_message
+  if [ -z "$commit_message" ]; then
     commit_message="Auto commit on $(date)"
   fi
 fi
