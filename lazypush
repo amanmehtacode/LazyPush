@@ -37,6 +37,10 @@ fi
 if [ "$pull_before_push" = true ]; then
   verbose "Pulling latest changes from the remote branch..."
   git pull origin $(git branch --show-current)
+  if [ $? -ne 0 ]; then
+    echo "Merge conflict or error occurred during pull. Please resolve manually."
+    exit 1
+  fi
 fi
 
 # Ask for a commit message
@@ -59,4 +63,8 @@ git commit -m "$commit_message"
 verbose "Pushing changes to the remote branch..."
 git push origin $(git branch --show-current)
 
-echo "Changes have been committed and pushed successfully."
+if [ $? -eq 0 ]; then
+  echo "Changes have been committed and pushed successfully."
+else
+  echo "Error: Push failed."
+fi
